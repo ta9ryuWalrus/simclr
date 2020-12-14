@@ -642,7 +642,7 @@ def main(argv):
       def train_multiple_steps(iterator):
         # `tf.range` is needed so that this runs in a `tf.while_loop` and is
         # not unrolled.
-        for _ in tf.range(steps_per_loop):
+        for i in tf.range(steps_per_loop):
           # Drop the "while" prefix created by tf.while_loop which otherwise
           # gets prefixed to every variable name. This does not affect training
           # but does affect the checkpoint conversion script.
@@ -651,11 +651,12 @@ def main(argv):
             images, labels = next(iterator)
             features, labels = images, {'labels': labels}
             strategy.run(single_step, (features, labels))
+          print("complete step %d/%d" % (i, steps_per_loop))
 
       global_step = optimizer.iterations
       cur_step = global_step.numpy()
       iterator = iter(ds)
-      while cur_step < train_steps:
+      while cur_step + 1 < train_steps:
         # Calls to tf.summary.xyz lookup the summary writer resource which is
         # set by the summary writer's context manager.
         with summary_writer.as_default():
