@@ -21,6 +21,7 @@ from absl import logging
 
 import data_util
 import tensorflow.compat.v2 as tf
+from sklearn.model_selection import train_test_split
 
 FLAGS = flags.FLAGS
 
@@ -29,7 +30,7 @@ def build_input_fn(builder, global_batch_size, topology, is_training):
   """Build input function.
 
   Args:
-    builder: TFDS builder for specified dataset.
+    builder: TFDS builder for specified dataset. ->　CSVファイルの中身(pandas framework)
     global_batch_size: Global batch size.
     topology: An instance of `tf.tpu.experimental.Topology` or None.
     is_training: Whether to build in training mode.
@@ -46,7 +47,8 @@ def build_input_fn(builder, global_batch_size, topology, is_training):
     logging.info('Per-replica batch size: %d', batch_size)
     preprocess_fn_pretrain = get_preprocess_fn(is_training, is_pretrain=True)
     preprocess_fn_finetune = get_preprocess_fn(is_training, is_pretrain=False)
-    num_classes = builder.info.features['label'].num_classes
+    #num_classes = builder.info.features['label'].num_classes
+    num_classes = 4
 
     def map_fn(image, label):
       """Produces multiple transformations of the same batch."""
@@ -60,10 +62,39 @@ def build_input_fn(builder, global_batch_size, topology, is_training):
       label = tf.one_hot(label, num_classes)
       return image, label
 
+    train_set, test_set = train_test_split(builder, stratify=builder['label'], test_size=0.3, random_state=1)
+    split=FLAGS.train_split if is_training else FLAGS.eval_split
+    if split == 'train':
+      data_builder = train_set
+    else:
+      data_builder = test_set
+    
+    all_image_paths = list(data_builder['image_id'])
+    all_image_paths = ['../input/cassava-leaf-disease-classification/train_images/' + str(path) for path in all_image_paths]
+    all_image_labels = list(data_builder['label'])
+
+    def preprocess_image(image):
+      image = tf.image.decode_jpeg(image, channels=3)
+      image = tf.image.resize(image, [600, 600])
+      image = tf.cast(image, tf.uint8)
+      return image
+
+    def load_and_preprocess_image(path):
+      image = tf.io.read_file(path)
+      return preprocess_image(image)
+
+    path_ds = tf.data.Dataset.from_tensor_slices(all_image_paths)
+    image_ds = path_ds.map(load_and_preprocess_image, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    label_ds = tf.data.Dataset.from_tensor_slices(tf.cast(all_image_labels, tf.int64))
+    dataset = tf.data.Dataset.zip((image_ds, label_ds))
+    dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
+
+    '''
     dataset = builder.as_dataset(
         split=FLAGS.train_split if is_training else FLAGS.eval_split,
         shuffle_files=is_training,
         as_supervised=True)
+    '''
     logging.info('num_input_pipelines: %d', input_context.num_input_pipelines)
     # The dataset is always sharded by number of hosts.
     # num_input_pipelines is the number of hosts rather than number of cores.

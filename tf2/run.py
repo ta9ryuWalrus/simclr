@@ -28,6 +28,8 @@ import model as model_lib
 import objective as obj_lib
 import tensorflow.compat.v2 as tf
 import tensorflow_datasets as tfds
+from sklearn.model_selection import train_test_split
+import pandas as pd
 
 
 
@@ -89,9 +91,14 @@ flags.DEFINE_string(
     'eval_split', 'validation',
     'Split for evaluation.')
 
+'''
 flags.DEFINE_string(
     'dataset', 'imagenet2012',
     'Name of a dataset.')
+'''
+flags.DEFINE_string(
+    'data_path', '../input/cassava-leaf-disease-classification/',
+    'Path of a dataset.')
 
 flags.DEFINE_bool(
     'cache_dataset', False,
@@ -226,8 +233,9 @@ flags.DEFINE_float(
     'If it is bigger than 0, it will enable SE.')
 
 flags.DEFINE_integer(
-    'image_size', 224,
+    'image_size', 600,
     'Input image size.')
+# 224 is default
 
 flags.DEFINE_float(
     'color_jitter_strength', 1.0,
@@ -464,12 +472,22 @@ def main(argv):
   if len(argv) > 1:
     raise app.UsageError('Too many command-line arguments.')
 
-
+  '''
   builder = tfds.builder(FLAGS.dataset, data_dir=FLAGS.data_dir)
   builder.download_and_prepare()
   num_train_examples = builder.info.splits[FLAGS.train_split].num_examples
   num_eval_examples = builder.info.splits[FLAGS.eval_split].num_examples
   num_classes = builder.info.features['label'].num_classes
+  '''
+  # data.pyのbuild_distributed_datasetをうまく書き換えることでbuilderの扱い方をいい感じにする
+  # build_distributed_datasetのなかでデータのオブジェクトを呼び出しているだけ(多分)
+  builder = pd.read_csv(FLAGS.data_path + 'train.csv')
+  train_builder, test_builder = train_test_split(builder, stratify=builder['label'], test_size=0.3, random_state=1)
+  num_train_examples = len(train_builder)
+  num_eval_examples = len(test_builder)
+  num_classes = 4
+
+  # これい以降はbuilderはbuild_distributed_datasetの引数としてしか登場しない
 
   train_steps = model_lib.get_train_steps(num_train_examples)
   eval_steps = FLAGS.eval_steps or int(
