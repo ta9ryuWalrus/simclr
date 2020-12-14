@@ -485,7 +485,7 @@ def main(argv):
   train_builder, test_builder = train_test_split(builder, stratify=builder['label'], test_size=0.3, random_state=1)
   num_train_examples = len(train_builder)
   num_eval_examples = len(test_builder)
-  num_classes = 4
+  num_classes = 5
 
   # これい以降はbuilderはbuild_distributed_datasetの引数としてしか登場しない
 
