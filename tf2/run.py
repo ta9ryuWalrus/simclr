@@ -642,7 +642,9 @@ def main(argv):
       def train_multiple_steps(iterator):
         # `tf.range` is needed so that this runs in a `tf.while_loop` and is
         # not unrolled.
-        for i in tf.range(steps_per_loop):
+        i = 0
+        for _ in tf.range(steps_per_loop):
+          i += 1
           # Drop the "while" prefix created by tf.while_loop which otherwise
           # gets prefixed to every variable name. This does not affect training
           # but does affect the checkpoint conversion script.
