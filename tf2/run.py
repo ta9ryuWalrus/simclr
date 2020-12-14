@@ -653,7 +653,7 @@ def main(argv):
             images, labels = next(iterator)
             features, labels = images, {'labels': labels}
             strategy.run(single_step, (features, labels))
-          print("complete step %d/%d" % (i, steps_per_loop))
+          print("complete step %d" % i)
 
       global_step = optimizer.iterations
       cur_step = global_step.numpy()
