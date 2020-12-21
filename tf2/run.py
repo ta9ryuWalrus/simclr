@@ -245,6 +245,14 @@ flags.DEFINE_boolean(
     'use_blur', True,
     'Whether or not to use Gaussian blur for augmentation during pretraining.')
 
+flags.DEFINE_float(
+    'test_ratio', 0.3,
+    'test_size of train_test_split')
+
+flags.DEFINE_float(
+    'supervised_ratio', 0.1,
+    'supervise label which is used in finetuning')
+
 
 def get_salient_tensors_dict():
   """Returns a dictionary of tensors."""
@@ -483,9 +491,7 @@ def main(argv):
   # build_distributed_datasetのなかでデータのオブジェクトを呼び出しているだけ(多分)
   builder = pd.read_csv(FLAGS.data_path + 'train.csv')
   
-  # semi-supervisedでstratifyを指定するのはラベルのリークになるのではないか
-  # train_builder, test_builder = train_test_split(builder, stratify=builder['label'], test_size=0.9, random_state=1)
-  train_builder, test_builder = train_test_split(builder, test_size=0.9, random_state=1)
+  train_builder, test_builder = train_test_split(builder, test_size=FLAGS.test_ratio, stratify=builder['label'], random_state=1)
   num_train_examples = len(train_builder)
   num_eval_examples = len(test_builder)
   num_classes = 5
@@ -539,6 +545,8 @@ def main(argv):
   else:
     summary_writer = tf.summary.create_file_writer(FLAGS.model_dir)
     with strategy.scope():
+      if FLAGS.train_mode == 'finetune':
+        _, train_builder = train_test_split(train_builder, test_size=FLAGS.supervised_ratio, random_state=1)
       # Build input pipeline.
       ds = data_lib.build_distributed_dataset(train_builder, FLAGS.train_batch_size,
                                               True, strategy, topology)
