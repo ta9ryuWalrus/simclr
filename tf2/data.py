@@ -61,17 +61,10 @@ def build_input_fn(builder, global_batch_size, topology, is_training):
         image = preprocess_fn_finetune(image)
       label = tf.one_hot(label, num_classes)
       return image, label
-
-    train_set, test_set = train_test_split(builder, stratify=builder['label'], test_size=0.3, random_state=1)
-    split=FLAGS.train_split if is_training else FLAGS.eval_split
-    if split == 'train':
-      data_builder = train_set
-    else:
-      data_builder = test_set
     
-    all_image_paths = list(data_builder['image_id'])
+    all_image_paths = list(builder['image_id'])
     all_image_paths = ['../input/cassava-leaf-disease-classification/train_images/' + str(path) for path in all_image_paths]
-    all_image_labels = list(data_builder['label'])
+    all_image_labels = list(builder['label'])
 
     def preprocess_image(image):
       image = tf.image.decode_jpeg(image, channels=3)

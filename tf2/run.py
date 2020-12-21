@@ -482,7 +482,10 @@ def main(argv):
   # data.pyのbuild_distributed_datasetをうまく書き換えることでbuilderの扱い方をいい感じにする
   # build_distributed_datasetのなかでデータのオブジェクトを呼び出しているだけ(多分)
   builder = pd.read_csv(FLAGS.data_path + 'train.csv')
-  train_builder, test_builder = train_test_split(builder, stratify=builder['label'], test_size=0.3, random_state=1)
+  
+  # semi-supervisedでstratifyを指定するのはラベルのリークになるのではないか
+  #train_builder, test_builder = train_test_split(builder, stratify=builder['label'], test_size=0.9, random_state=1)
+  train_builder, test_builder = train_test_split(builder, test_size=0.9, random_state=1)
   num_train_examples = len(train_builder)
   num_eval_examples = len(test_builder)
   num_classes = 5
@@ -528,7 +531,7 @@ def main(argv):
   if FLAGS.mode == 'eval':
     for ckpt in tf.train.checkpoints_iterator(
         FLAGS.model_dir, min_interval_secs=15):
-      result = perform_evaluation(model, builder, eval_steps, ckpt, strategy,
+      result = perform_evaluation(model, test_builder, eval_steps, ckpt, strategy,
                                   topology)
       if result['global_step'] >= train_steps:
         logging.info('Eval complete. Exiting...')
@@ -537,7 +540,7 @@ def main(argv):
     summary_writer = tf.summary.create_file_writer(FLAGS.model_dir)
     with strategy.scope():
       # Build input pipeline.
-      ds = data_lib.build_distributed_dataset(builder, FLAGS.train_batch_size,
+      ds = data_lib.build_distributed_dataset(train_builder, FLAGS.train_batch_size,
                                               True, strategy, topology)
 
       # Build LR schedule and optimizer.
@@ -674,7 +677,7 @@ def main(argv):
       logging.info('Training complete...')
 
     if FLAGS.mode == 'train_then_eval':
-      perform_evaluation(model, builder, eval_steps,
+      perform_evaluation(model, test_builder, eval_steps,
                          checkpoint_manager.latest_checkpoint, strategy,
                          topology)
 
