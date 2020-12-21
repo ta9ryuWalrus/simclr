@@ -484,7 +484,7 @@ def main(argv):
   builder = pd.read_csv(FLAGS.data_path + 'train.csv')
   
   # semi-supervisedでstratifyを指定するのはラベルのリークになるのではないか
-  #train_builder, test_builder = train_test_split(builder, stratify=builder['label'], test_size=0.9, random_state=1)
+  # train_builder, test_builder = train_test_split(builder, stratify=builder['label'], test_size=0.9, random_state=1)
   train_builder, test_builder = train_test_split(builder, test_size=0.9, random_state=1)
   num_train_examples = len(train_builder)
   num_eval_examples = len(test_builder)
