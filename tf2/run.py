@@ -55,7 +55,7 @@ flags.DEFINE_float(
     'Batch norm decay parameter.')
 
 flags.DEFINE_integer(
-    'train_batch_size', 512,
+    'train_batch_size', 32,
     'Batch size for training.')
 
 flags.DEFINE_string(
@@ -75,7 +75,7 @@ flags.DEFINE_integer(
     'Number of steps to eval for. If not provided, evals over entire dataset.')
 
 flags.DEFINE_integer(
-    'eval_batch_size', 256,
+    'eval_batch_size', 32,
     'Batch size for eval.')
 
 flags.DEFINE_integer(
@@ -492,6 +492,9 @@ def main(argv):
   builder = pd.read_csv(FLAGS.data_path + 'train.csv')
   
   train_builder, test_builder = train_test_split(builder, test_size=FLAGS.test_ratio, stratify=builder['label'], random_state=1)
+  if FLAGS.train_mode == 'finetune':
+    # trainの中からsupervisedとして使うデータを抽出
+    _, train_builder = train_test_split(train_builder, test_size=FLAGS.supervised_ratio, random_state=1)
   num_train_examples = len(train_builder)
   num_eval_examples = len(test_builder)
   num_classes = 5
@@ -545,8 +548,6 @@ def main(argv):
   else:
     summary_writer = tf.summary.create_file_writer(FLAGS.model_dir)
     with strategy.scope():
-      if FLAGS.train_mode == 'finetune':
-        _, train_builder = train_test_split(train_builder, test_size=FLAGS.supervised_ratio, random_state=1)
       # Build input pipeline.
       ds = data_lib.build_distributed_dataset(train_builder, FLAGS.train_batch_size,
                                               True, strategy, topology)
