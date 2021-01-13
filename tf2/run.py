@@ -67,6 +67,11 @@ flags.DEFINE_integer(
     'Number of epochs to train for.')
 
 flags.DEFINE_integer(
+    'pretrain_epochs', 40,
+    'Number of epoch to pretrain. This augment is used in finetuning.'
+)
+
+flags.DEFINE_integer(
     'train_steps', 0,
     'Number of steps to train for. If provided, overrides train_epochs.')
 
@@ -499,10 +504,11 @@ def main(argv):
   eval_steps = FLAGS.eval_steps or int(
       math.ceil(num_eval_examples / FLAGS.eval_batch_size))
   if FLAGS.train_mode == 'finetune':
+    train_steps = num_train_examples * FLAGS.pretrain_epochs // FLAGS.train_batch_size + 1
     # trainの中からsupervisedとして使うデータを抽出
     _, train_builder = train_test_split(train_builder, test_size=FLAGS.supervised_ratio, random_state=1)
     num_train_examples = len(train_builder)
-    train_steps += model_lib.get_train_steps(num_train_examples)
+    train_steps += num_train_examples * FLAGS.train_epochs // FLAGS.train_batch_size
 
   # これ以降はbuilderはbuild_distributed_datasetの引数としてしか登場しない
   epoch_steps = int(round(num_train_examples / FLAGS.train_batch_size))
