@@ -492,18 +492,19 @@ def main(argv):
   builder = pd.read_csv(FLAGS.data_path + 'train.csv')
   
   train_builder, test_builder = train_test_split(builder, test_size=FLAGS.test_ratio, stratify=builder['label'], random_state=1)
-  if FLAGS.train_mode == 'finetune':
-    # trainの中からsupervisedとして使うデータを抽出
-    _, train_builder = train_test_split(train_builder, test_size=FLAGS.supervised_ratio, random_state=1)
   num_train_examples = len(train_builder)
   num_eval_examples = len(test_builder)
   num_classes = 5
-
-  # これい以降はbuilderはbuild_distributed_datasetの引数としてしか登場しない
-
   train_steps = model_lib.get_train_steps(num_train_examples)
   eval_steps = FLAGS.eval_steps or int(
       math.ceil(num_eval_examples / FLAGS.eval_batch_size))
+  if FLAGS.train_mode == 'finetune':
+    # trainの中からsupervisedとして使うデータを抽出
+    _, train_builder = train_test_split(train_builder, test_size=FLAGS.supervised_ratio, random_state=1)
+    num_train_examples = len(train_builder)
+    train_steps += model_lib.get_train_steps(num_train_examples)
+
+  # これ以降はbuilderはbuild_distributed_datasetの引数としてしか登場しない
   epoch_steps = int(round(num_train_examples / FLAGS.train_batch_size))
 
   logging.info('# train examples: %d', num_train_examples)
