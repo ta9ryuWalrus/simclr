@@ -238,7 +238,7 @@ class Model(tf.keras.models.Model):
           cifar_stem=FLAGS.image_size <= 32)
     elif FLAGS.arch == 'efficientnet':
       import efficientnet.keras as efn 
-      model = efn.EfficientNetB0(weights=None, include_top=False)
+      self.resnet_model = efn.EfficientNetB0(weights=None, include_top=False)
 
     self._projection_head = ProjectionHead()
     if FLAGS.train_mode == 'finetune' or FLAGS.lineareval_while_pretraining:
