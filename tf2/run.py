@@ -258,6 +258,11 @@ flags.DEFINE_float(
     'supervised_ratio', 0.1,
     'supervise label which is used in finetuning')
 
+flags.DEFINE_enum(
+    'arch', 'resnet', ['resnet', 'efficientnet'],
+    'model architecture'
+)
+
 
 def get_salient_tensors_dict():
   """Returns a dictionary of tensors."""

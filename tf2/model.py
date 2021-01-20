@@ -231,10 +231,15 @@ class Model(tf.keras.models.Model):
 
   def __init__(self, num_classes, **kwargs):
     super(Model, self).__init__(**kwargs)
-    self.resnet_model = resnet.resnet(
-        resnet_depth=FLAGS.resnet_depth,
-        width_multiplier=FLAGS.width_multiplier,
-        cifar_stem=FLAGS.image_size <= 32)
+    if FLAGS.arch == 'resnet':
+      self.resnet_model = resnet.resnet(
+          resnet_depth=FLAGS.resnet_depth,
+          width_multiplier=FLAGS.width_multiplier,
+          cifar_stem=FLAGS.image_size <= 32)
+    elif FLAGS.arch == 'efficientnet':
+      import efficientnet.keras as efn 
+      model = efn.EfficientNetB0(weights=None, include_top=False)
+
     self._projection_head = ProjectionHead()
     if FLAGS.train_mode == 'finetune' or FLAGS.lineareval_while_pretraining:
       self.supervised_head = SupervisedHead(num_classes)
