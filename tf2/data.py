@@ -68,7 +68,7 @@ def build_input_fn(builder, global_batch_size, topology, is_training):
 
     def preprocess_image(image):
       image = tf.image.decode_jpeg(image, channels=3)
-      image = tf.image.resize(image, [600, 600])
+      image = tf.image.resize(image, [FLAGS.image_size, FLAGS.image_size])
       image = tf.cast(image, tf.uint8)
       return image
 

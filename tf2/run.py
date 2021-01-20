@@ -238,7 +238,7 @@ flags.DEFINE_float(
     'If it is bigger than 0, it will enable SE.')
 
 flags.DEFINE_integer(
-    'image_size', 600,
+    'image_size', 400,
     'Input image size.')
 # 224 is default
 
