@@ -28,7 +28,7 @@ import model as model_lib
 import objective as obj_lib
 import tensorflow.compat.v2 as tf
 import tensorflow_datasets as tfds
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, StratifiedKFold
 import pandas as pd
 import numpy as np
 import random
@@ -517,10 +517,19 @@ def main(argv):
   # data.pyのbuild_distributed_datasetをうまく書き換えることでbuilderの扱い方をいい感じにする
   # build_distributed_datasetのなかでデータのオブジェクトを呼び出しているだけ(多分)
   builder = pd.read_csv(FLAGS.data_path + 'train.csv')
-  builder_s = builder.sample(frac=1, random_state=FLAGS.seed).reset_index(drop=True)
-  num_fold = len(builder) // 5
-  test_builder = builder[num_fold * FLAGS.fold: num_fold * (FLAGS.fold + 1)]
-  train_builder = builder.drop(builder.index[num_fold * FLAGS.fold: num_fold * (FLAGS.fold + 1)])
+
+  #builder_s = builder.sample(frac=1, random_state=FLAGS.seed).reset_index(drop=True)
+  #num_fold = len(builder) // 5
+  #test_builder = builder[num_fold * FLAGS.fold: num_fold * (FLAGS.fold + 1)]
+  #train_builder = builder.drop(builder.index[num_fold * FLAGS.fold: num_fold * (FLAGS.fold + 1)])
+
+  kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=FLAGS.seed)
+  i = 0
+  for train_idx, test_idx in kf.split(builder['image_id'], builder['label']):
+    if i == FLAGS.fold:
+      train_builder = builder.iloc[train_idx]
+      test_builder = builder.iloc[test_idx]
+    i += 1
 
   #train_builder, test_builder = train_test_split(builder, test_size=FLAGS.test_ratio, stratify=builder['label'], random_state=1)
   num_train_examples = len(train_builder)
