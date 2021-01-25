@@ -265,6 +265,8 @@ class Model(tf.keras.models.Model):
 
     # Base network forward pass.
     hiddens = self.resnet_model(features, training=training)
+    if FLAGS.arch == 'efficientnet':
+      hiddens = tf.reduce_mean(hiddens, [1, 2]) # これをefficientnetでもやる必要？
 
     # Add heads.
     projection_head_outputs, supervised_head_inputs = self._projection_head(
