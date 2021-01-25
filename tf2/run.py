@@ -28,8 +28,10 @@ import model as model_lib
 import objective as obj_lib
 import tensorflow.compat.v2 as tf
 import tensorflow_datasets as tfds
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, StratifiedKFold
 import pandas as pd
+import numpy as np
+import random
 
 
 
@@ -263,6 +265,20 @@ flags.DEFINE_enum(
     'model architecture'
 )
 
+flags.DEFINE_integer(
+    'seed', 0,
+    'random seed for tf, np, random modules'
+)
+
+flags.DEFINE_integer(
+    'fold', 0,
+    'order of 5-fold (range 0~4)'
+)
+
+def set_seed(seed=0):
+  tf.random.set_seed(seed)
+  np.random.seed(seed)
+  random.seed(seed)
 
 def get_salient_tensors_dict():
   """Returns a dictionary of tensors."""
@@ -497,11 +513,20 @@ def main(argv):
   num_eval_examples = builder.info.splits[FLAGS.eval_split].num_examples
   num_classes = builder.info.features['label'].num_classes
   '''
+  set_seed(FLAGS.seed)
   # data.pyのbuild_distributed_datasetをうまく書き換えることでbuilderの扱い方をいい感じにする
   # build_distributed_datasetのなかでデータのオブジェクトを呼び出しているだけ(多分)
   builder = pd.read_csv(FLAGS.data_path + 'train.csv')
   
-  train_builder, test_builder = train_test_split(builder, test_size=FLAGS.test_ratio, stratify=builder['label'], random_state=1)
+  kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=FLAGS.seed)
+  i = 0
+  for train_idx, test_idx in kf.split(builder['image_id'], builder['label']):
+    if i == FLAGS.fold:
+      train_builder = builder[train_idx]
+      test_builder = builder[test_idx]
+    i += 1
+
+  #train_builder, test_builder = train_test_split(builder, test_size=FLAGS.test_ratio, stratify=builder['label'], random_state=1)
   num_train_examples = len(train_builder)
   num_eval_examples = len(test_builder)
   num_classes = 5
