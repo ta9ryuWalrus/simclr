@@ -691,7 +691,7 @@ class Resnet(tf.keras.layers.Layer):  # pylint: disable=missing-docstring
     if FLAGS.train_mode == 'finetune' and FLAGS.fine_tune_after_block == 4:
       inputs = tf.stop_gradient(inputs)
     if self.data_format == 'channels_last':
-      inputs = tf.reduce_mean(inputs, [1, 2])
+      inputs = tf.reduce_mean(inputs, [1, 2]) # これをefficientnetでもやる必要？
     else:
       inputs = tf.reduce_mean(inputs, [2, 3])
 
