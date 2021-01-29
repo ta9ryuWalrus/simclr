@@ -275,6 +275,11 @@ flags.DEFINE_integer(
     'order of 5-fold (range 0~4)'
 )
 
+flags.DEFINE_boolean(
+    'stratify', False,
+    'stratify split for unlabeled/labeled'
+)
+
 def set_seed(seed=0):
   tf.random.set_seed(seed)
   np.random.seed(seed)
@@ -540,7 +545,11 @@ def main(argv):
       math.ceil(num_eval_examples / FLAGS.eval_batch_size))
   if FLAGS.train_mode == 'finetune':
     # trainの中からsupervisedとして使うデータを抽出
-    _, train_builder = train_test_split(train_builder, test_size=FLAGS.supervised_ratio, random_state=1)
+    if FLAGS.stratiry:
+      train_builder, _ = train_test_split(train_builder, train_size=FLAGS.supervised_ratio, random_state=FLAGS.seed, stratify=train_builder['label'])
+      print(train_builder['label'].value_counts())
+    else:
+      train_builder, _ = train_test_split(train_builder, train_size=FLAGS.supervised_ratio, random_state=FLAGS.seed)
     num_train_examples = len(train_builder)
     train_steps = FLAGS.pretrain_steps + num_train_examples * FLAGS.train_epochs // FLAGS.train_batch_size
 
