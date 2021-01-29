@@ -545,7 +545,7 @@ def main(argv):
       math.ceil(num_eval_examples / FLAGS.eval_batch_size))
   if FLAGS.train_mode == 'finetune':
     # trainの中からsupervisedとして使うデータを抽出
-    if FLAGS.stratiry:
+    if FLAGS.stratify:
       train_builder, _ = train_test_split(train_builder, train_size=FLAGS.supervised_ratio, random_state=FLAGS.seed, stratify=train_builder['label'])
       print(train_builder['label'].value_counts())
     else:
