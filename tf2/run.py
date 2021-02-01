@@ -636,7 +636,7 @@ def main(argv):
   if FLAGS.mode == 'check':
     for ckpt in tf.train.checkpoints_iterator(
         FLAGS.model_dir, min_interval_secs=15):
-      result = perform_evaluation(model, test_builder, eval_steps, ckpt, strategy,
+      result = check(model, test_builder, eval_steps, ckpt, strategy,
                                   topology)
       if result['global_step'] >= train_steps:
         logging.info('Eval complete. Exiting...')
