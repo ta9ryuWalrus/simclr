@@ -564,8 +564,11 @@ def main(argv):
   num_eval_examples = builder.info.splits[FLAGS.eval_split].num_examples
   num_classes = builder.info.features['label'].num_classes
   '''
-  if FLAGS.mode == 'check':
-    tf.enable_eager_execution()
+  if tf.executing eagerly():
+    print('Eager mode now!')
+  else:
+    print('not Eager mode!')
+    
   set_seed(FLAGS.seed)
   # data.pyのbuild_distributed_datasetをうまく書き換えることでbuilderの扱い方をいい感じにする
   # build_distributed_datasetのなかでデータのオブジェクトを呼び出しているだけ(多分)
