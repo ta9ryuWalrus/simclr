@@ -417,7 +417,6 @@ def check(model, builder, eval_steps, ckpt, strategy, topology):
 
   with strategy.scope():
 
-    @tf.function
     def run_single_step(iterator):
       images, labels = next(iterator)
       features, labels = images, {'labels': labels}
