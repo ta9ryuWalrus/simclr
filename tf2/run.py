@@ -114,7 +114,7 @@ flags.DEFINE_bool(
     'improve performance.')
 
 flags.DEFINE_enum(
-    'mode', 'train', ['train', 'eval', 'train_then_eval'],
+    'mode', 'train', ['train', 'eval', 'train_then_eval', 'check'],
     'Whether to perform training or evaluation.')
 
 flags.DEFINE_enum(
@@ -387,6 +387,52 @@ def json_serializable(val):
   except TypeError:
     return False
 
+def check(model, builder, eval_steps, ckpt, strategy, topology):
+  """Perform evaluation."""
+  # Build input pipeline.
+  ds = data_lib.build_distributed_dataset(builder, FLAGS.eval_batch_size, False,
+                                          strategy, topology)
+
+  # Build metrics.
+  with strategy.scope():
+
+    # Restore checkpoint.
+    logging.info('Restoring from %s', ckpt)
+    checkpoint = tf.train.Checkpoint(
+        model=model, global_step=tf.Variable(0, dtype=tf.int64))
+    checkpoint.restore(ckpt).expect_partial()
+    global_step = checkpoint.global_step
+    logging.info('Performing eval at step %d', global_step.numpy())
+
+  preds_count = np.zeros(5)
+
+  def single_step(features, labels):
+    _, supervised_head_outputs = model(features, training=False)
+    assert supervised_head_outputs is not None
+    outputs = supervised_head_outputs.numpy()
+    pred = np.argmax(outputs, axis=1)
+    u, counts = np.unique(pred, return_counts=True)
+    for i, j in zip(u, counts):
+      preds_count[i] += j
+
+  with strategy.scope():
+
+    @tf.function
+    def run_single_step(iterator):
+      images, labels = next(iterator)
+      features, labels = images, {'labels': labels}
+      strategy.run(single_step, (features, labels))
+
+    iterator = iter(ds)
+    for i in range(eval_steps):
+      run_single_step(iterator)
+      logging.info('Completed eval for %d / %d steps', i + 1, eval_steps)
+    logging.info('Finished eval for %s', ckpt)
+    logging.info('pred counts {}'.format(preds_count))
+
+  return preds_count
+
+
 
 def perform_evaluation(model, builder, eval_steps, ckpt, strategy, topology):
   """Perform evaluation."""
@@ -587,7 +633,15 @@ def main(argv):
   with strategy.scope():
     model = model_lib.Model(num_classes)
 
-  if FLAGS.mode == 'eval':
+  if FLAGS.mode == 'check':
+    for ckpt in tf.train.checkpoints_iterator(
+        FLAGS.model_dir, min_interval_secs=15):
+      result = perform_evaluation(model, test_builder, eval_steps, ckpt, strategy,
+                                  topology)
+      if result['global_step'] >= train_steps:
+        logging.info('Eval complete. Exiting...')
+        return
+  elif FLAGS.mode == 'eval':
     for ckpt in tf.train.checkpoints_iterator(
         FLAGS.model_dir, min_interval_secs=15):
       result = perform_evaluation(model, test_builder, eval_steps, ckpt, strategy,
